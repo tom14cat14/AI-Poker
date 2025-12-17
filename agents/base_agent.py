@@ -29,8 +29,12 @@ class BaseLLMAgent(AIPlayer):
         self.personality = personality
         self.timeout = 30.0  # API timeout
 
+    # Token limits for different call types
+    DECISION_TOKENS = 200   # Fast, punchy decisions
+    REFLECTION_TOKENS = 400  # Deeper learning/analysis
+
     @abstractmethod
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         """Make API call to LLM. Implemented by subclasses."""
         pass
 
@@ -47,7 +51,7 @@ class BaseLLMAgent(AIPlayer):
             prompt = f"[Your personality: {self.personality}]\n\n" + prompt
 
         try:
-            response = await self._call_llm(prompt)
+            response = await self._call_llm(prompt, max_tokens=self.DECISION_TOKENS)
             decision = self._parse_decision(response)
             return decision
         except Exception as e:
@@ -70,7 +74,8 @@ class BaseLLMAgent(AIPlayer):
             prompt = f"[Your personality: {self.personality}]\n\n" + prompt
 
         try:
-            response = await self._call_llm(prompt)
+            # More tokens for deeper learning/analysis
+            response = await self._call_llm(prompt, max_tokens=self.REFLECTION_TOKENS)
             return response.strip()
         except Exception as e:
             print(f"[{self.name}] Error reflecting: {e}")
@@ -92,7 +97,7 @@ Trash talk: Witty, cocky, but respects great plays. Dark humor."""
         self.api_key = os.getenv("XAI_API_KEY")
         self.api_url = "https://api.x.ai/v1/chat/completions"
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
             raise ValueError("XAI_API_KEY not set")
 
@@ -107,7 +112,7 @@ Trash talk: Witty, cocky, but respects great plays. Dark humor."""
                     "model": "grok-beta",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 500
+                    "max_tokens": max_tokens
                 }
             )
             response.raise_for_status()
@@ -130,7 +135,7 @@ Trash talk: Minimal. Let your stack do the talking. Acknowledge good plays with 
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.api_url = "https://api.openai.com/v1/chat/completions"
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY not set")
 
@@ -145,7 +150,7 @@ Trash talk: Minimal. Let your stack do the talking. Acknowledge good plays with 
                     "model": "gpt-4-turbo-preview",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 500
+                    "max_tokens": max_tokens
                 }
             )
             response.raise_for_status()
@@ -168,7 +173,7 @@ Trash talk: Rarely engages. Stays zen. When you do speak, it cuts deep."""
         self.api_key = os.getenv("DEEPSEEK_API_KEY")
         self.api_url = "https://api.deepseek.com/v1/chat/completions"
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
             raise ValueError("DEEPSEEK_API_KEY not set")
 
@@ -183,7 +188,7 @@ Trash talk: Rarely engages. Stays zen. When you do speak, it cuts deep."""
                     "model": "deepseek-chat",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 500
+                    "max_tokens": max_tokens
                 }
             )
             response.raise_for_status()
@@ -206,7 +211,7 @@ Trash talk: LOUD. Tilting opponents is a weapon. Channel Hellmuth's Poker Brat e
         self.api_key = os.getenv("GOOGLE_API_KEY")
         self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY not set")
 
@@ -218,7 +223,7 @@ Trash talk: LOUD. Tilting opponents is a weapon. Channel Hellmuth's Poker Brat e
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {
                         "temperature": 0.7,
-                        "maxOutputTokens": 500
+                        "maxOutputTokens": max_tokens
                     }
                 }
             )
@@ -241,8 +246,9 @@ Trash talk: Wise, old-timer wisdom. Respects the game. Quiet confidence that uns
         )
         self.api_url = os.getenv("QWEN_API_URL", "http://localhost:8000/v1")
         self.model = os.getenv("QWEN_MODEL", "qwen3-235b")
+        self.timeout = 120.0  # Longer timeout for big model
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.api_url}/chat/completions",
@@ -251,7 +257,7 @@ Trash talk: Wise, old-timer wisdom. Respects the game. Quiet confidence that uns
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
-                    "max_tokens": 500
+                    "max_tokens": max_tokens
                 }
             )
             response.raise_for_status()
