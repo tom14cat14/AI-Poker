@@ -149,7 +149,7 @@ async def get_history(limit: int = 10):
 
 
 # Event broadcasting functions (called by tournament runner)
-async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Dict):
+async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Dict, button_player: str = None):
     """Broadcast new hand starting."""
     event = {
         "type": "hand_start",
@@ -157,7 +157,8 @@ async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Di
         "data": {
             "hand_number": hand_number,
             "players": players,
-            "blinds": blinds
+            "blinds": blinds,
+            "button_player": button_player
         }
     }
     game_state.current_hand = event["data"]

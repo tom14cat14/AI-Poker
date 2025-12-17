@@ -24,6 +24,17 @@ from core import (
 )
 from agents import create_all_agents
 
+# Import broadcast functions for WebSocket updates
+try:
+    from api import (
+        broadcast_hand_start, broadcast_action, broadcast_pot_update,
+        broadcast_community_cards, broadcast_hand_result, broadcast_chip_update,
+        broadcast_elimination, broadcast_blinds_up, broadcast_tournament_end
+    )
+    WEBSOCKET_ENABLED = True
+except ImportError:
+    WEBSOCKET_ENABLED = False
+
 
 class PokerArena:
     """
@@ -64,6 +75,23 @@ class PokerArena:
         print(f"Blinds: {game.small_blind}/{game.big_blind}")
         chips = {p.name: p.chips for p in game.players if p.is_active}
         print(f"Chips: {chips}")
+
+        # Get button player name
+        active_players = [p for p in game.players if p.is_active]
+        button_player = None
+        if active_players and hasattr(game, 'button_pos'):
+            button_idx = game.button_pos % len(active_players)
+            button_player = active_players[button_idx].name
+            print(f"Button: {button_player}")
+
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_hand_start(
+                hand_number,
+                [{"name": p.name, "chips": p.chips} for p in game.players if p.is_active],
+                {"small_blind": game.small_blind, "big_blind": game.big_blind},
+                button_player
+            ))
 
     def on_hand_complete(self, result):
         """Called when a hand completes."""

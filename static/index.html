@@ -1023,6 +1023,10 @@
                     clearBets();
                     clearPlayerCards();
                     clearFolded();
+                    // Move dealer button to current button player
+                    if (msg.data.button_player) {
+                        setDealer(msg.data.button_player);
+                    }
                     break;
 
                 case 'action':
