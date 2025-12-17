@@ -20,16 +20,17 @@ load_dotenv(os.path.expanduser("~/.env.keys"))
 
 from core import (
     Tournament, TournamentConfig, TournamentRunner,
-    AIPlayerManager, Action
+    AIPlayerManager, Action, AIDecision
 )
 from agents import create_all_agents
 
 # Import broadcast functions for WebSocket updates
 try:
     from api import (
-        broadcast_hand_start, broadcast_action, broadcast_pot_update,
-        broadcast_community_cards, broadcast_hand_result, broadcast_chip_update,
-        broadcast_elimination, broadcast_blinds_up, broadcast_tournament_end
+        broadcast_hand_start, broadcast_action,
+        broadcast_community_cards, broadcast_hand_result,
+        broadcast_elimination, broadcast_blinds_up, broadcast_tournament_end,
+        update_player_chips
     )
     WEBSOCKET_ENABLED = True
 except ImportError:
@@ -64,8 +65,30 @@ class PokerArena:
         game_state: Dict,
         valid_actions: List[Tuple]
     ) -> Tuple[Action, int]:
-        """Get action from AI player."""
-        return await self.manager.get_action(player_name, game_state, valid_actions)
+        """Get action from AI player and broadcast it."""
+        decision = await self.manager.get_action(player_name, game_state, valid_actions)
+
+        # Print action to console
+        action_str = decision.action.name.lower()
+        if decision.amount > 0:
+            print(f"  [{player_name}] {action_str} {decision.amount}")
+        else:
+            print(f"  [{player_name}] {action_str}")
+        if decision.reasoning:
+            print(f"    \"{decision.reasoning}\"")
+
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_action(
+                player_name,
+                action_str,
+                decision.amount,
+                decision.reasoning,
+                decision.inner_thoughts,
+                decision.trash_talk
+            ))
+
+        return (decision.action, decision.amount)
 
     def on_hand_start(self, hand_number: int, game):
         """Called when a new hand starts."""
@@ -97,8 +120,14 @@ class PokerArena:
         """Called when a hand completes."""
         print(f"\n{result.summary}")
 
-        # Distribute trash talk to recipients
-        # (In future: broadcast to WebSocket)
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_hand_result(
+                result.winners[0] if result.winners else "Unknown",
+                result.pot,
+                result.final_board,
+                result.summary
+            ))
 
     def on_elimination(self, name: str, place: int):
         """Called when a player is eliminated."""
@@ -106,10 +135,28 @@ class PokerArena:
         print(f"ELIMINATED: {name} (finished {place}th)")
         print(f"{'*'*50}")
 
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_elimination(name, place))
+
     def on_level_up(self, level: int, blinds):
         """Called when blinds increase."""
         print(f"\n[BLINDS UP] Level {level}: {blinds.small_blind}/{blinds.big_blind}" +
               (f" ante {blinds.ante}" if blinds.ante else ""))
+
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_blinds_up(
+                level, blinds.small_blind, blinds.big_blind, blinds.ante
+            ))
+
+    def on_community_cards(self, stage: str, cards: list):
+        """Called when community cards are dealt."""
+        print(f"  [BOARD] {stage.upper()}: {' '.join(cards)}")
+
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_community_cards(cards, stage))
 
     def on_tournament_complete(self, results):
         """Called when tournament ends."""
@@ -122,6 +169,17 @@ class PokerArena:
         print("\nFinal Standings:")
         for standing in results.final_standings:
             print(f"  {standing['place']}. {standing['name']}")
+
+        # Broadcast to WebSocket
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_tournament_end(
+                results.winner,
+                results.final_standings,
+                {
+                    "total_hands": results.total_hands,
+                    "duration_seconds": results.duration_seconds
+                }
+            ))
 
     async def run_tournament(self):
         """Run a complete tournament."""
@@ -143,6 +201,7 @@ class PokerArena:
         tournament.on_elimination = self.on_elimination
         tournament.on_level_up = self.on_level_up
         tournament.on_tournament_complete = self.on_tournament_complete
+        tournament.on_community_cards = self.on_community_cards
 
         # Create runner
         runner = TournamentRunner(tournament, self.get_ai_action)

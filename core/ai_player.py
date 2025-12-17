@@ -339,11 +339,11 @@ class AIPlayerManager:
         player_name: str,
         game_state: Dict,
         valid_actions: List[Tuple[Action, int, int]]
-    ) -> Tuple[Action, int]:
-        """Get action from specified player."""
+    ) -> AIDecision:
+        """Get action from specified player. Returns full AIDecision."""
         player = self.players.get(player_name)
         if not player:
-            return (Action.FOLD, 0)
+            return AIDecision(Action.FOLD, 0, "No player found")
 
         decision = await player.get_decision(game_state, valid_actions)
 
@@ -351,18 +351,19 @@ class AIPlayerManager:
         valid_action_types = [a[0] for a in valid_actions]
         if decision.action not in valid_action_types:
             # Default to first valid action
-            return (valid_actions[0][0], valid_actions[0][1])
+            return AIDecision(valid_actions[0][0], valid_actions[0][1], decision.reasoning)
 
         # Validate amount
         for action, min_amt, max_amt in valid_actions:
             if action == decision.action:
                 if decision.action in [Action.BET, Action.RAISE]:
                     amount = max(min_amt, min(decision.amount, max_amt))
-                    return (decision.action, amount)
+                    decision.amount = amount
                 else:
-                    return (decision.action, min_amt)
+                    decision.amount = min_amt
+                return decision
 
-        return (Action.FOLD, 0)
+        return AIDecision(Action.FOLD, 0, decision.reasoning)
 
     async def update_all_notes(
         self,

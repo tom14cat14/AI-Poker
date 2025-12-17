@@ -96,6 +96,7 @@ class Tournament:
         self.on_elimination: Optional[Callable] = None
         self.on_level_up: Optional[Callable] = None
         self.on_tournament_complete: Optional[Callable] = None
+        self.on_community_cards: Optional[Callable] = None  # (stage, cards)
 
     @property
     def current_blinds(self) -> BlindLevel:
@@ -286,12 +287,20 @@ class TournamentRunner:
                 break
 
             game.deal_community()
+            # Notify of community cards
+            if self.tournament.on_community_cards:
+                cards = [str(c) for c in game.state.community_cards]
+                self.tournament.on_community_cards(game.state.stage, cards)
             game.reset_betting_round()
             await self._run_betting_round(game)
 
         # If players remain but all-in, deal remaining cards
         while len(game.active_players()) > 1 and game.state.stage != "river":
             game.deal_community()
+            # Notify of community cards
+            if self.tournament.on_community_cards:
+                cards = [str(c) for c in game.state.community_cards]
+                self.tournament.on_community_cards(game.state.stage, cards)
 
         # Showdown
         winners = game.determine_winners()
