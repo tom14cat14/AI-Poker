@@ -21,6 +21,11 @@ notes/
 # Results (local only)
 results/
 
+# Generated assets (large binary files)
+assets/portraits/*.png
+assets/scenes/*.png
+assets/audio/**/*.mp3
+
 # IDE
 .idea/
 .vscode/
