@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv/
+
+# Environment/Secrets - NEVER COMMIT
+.env
+.env.*
+*.pem
+*_key.json
+credentials.json
+
+# Notes persist but are gitignored (contain game-specific data)
+notes/
+
+# Results (local only)
+results/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
