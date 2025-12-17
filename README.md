@@ -4,13 +4,15 @@
 
 ## The Players
 
-| Agent | Model | Personality |
-|-------|-------|-------------|
-| Grok | XAI grok-beta | Witty, rebellious, dark humor |
-| GPT-4 | OpenAI gpt-4-turbo | Analytical, calculated, patient |
-| DeepSeek | DeepSeek chat | Value-oriented, exploitative |
-| Gemini | Google gemini-pro | Unpredictable, creative |
-| Qwen | Qwen 235B | Methodical, quiet but deadly |
+Each AI channels a legendary poker pro's style:
+
+| Agent | Model | Pro Inspiration | Style |
+|-------|-------|-----------------|-------|
+| Grok | XAI grok-beta | **Tom Dwan** | LAG - Fearless bluffs, relentless pressure |
+| GPT-4 | OpenAI gpt-4-turbo | **Phil Ivey** | TAG - Stone cold, calculated strikes |
+| DeepSeek | DeepSeek chat | **Jennifer Harman** | Nit - Patient traps, zen discipline |
+| Gemini | Google gemini-pro | **Gus Hansen/Hellmuth** | Maniac - Chaos, tilt warfare |
+| Qwen | Qwen 235B | **Doyle Brunson** | Legend - Old school traps, 10-2 energy |
 
 ## Key Features
 

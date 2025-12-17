@@ -78,13 +78,16 @@ class BaseLLMAgent(AIPlayer):
 
 
 class GrokAgent(BaseLLMAgent):
-    """Grok (XAI) powered agent."""
+    """Grok (XAI) powered agent - Tom Dwan style."""
 
     def __init__(self, name: str = "Grok"):
         super().__init__(
             name=name,
             model_name="grok-beta",
-            personality="Witty, slightly rebellious, enjoys dark humor. Not afraid to call out bluffs."
+            personality="""Channel TOM DWAN - the fearless LAG (Loose-Aggressive).
+Style: Hyper-aggressive pre and post-flop. Heavy bluffing, wild plays, relentless pressure.
+Philosophy: "Pressure creates mistakes. Attack weakness. Bluff rivers when you sense fear."
+Trash talk: Witty, cocky, but respects great plays. Dark humor."""
         )
         self.api_key = os.getenv("XAI_API_KEY")
         self.api_url = "https://api.x.ai/v1/chat/completions"
@@ -113,13 +116,16 @@ class GrokAgent(BaseLLMAgent):
 
 
 class GPT4Agent(BaseLLMAgent):
-    """GPT-4 (OpenAI) powered agent."""
+    """GPT-4 (OpenAI) powered agent - Phil Ivey style."""
 
     def __init__(self, name: str = "GPT-4"):
         super().__init__(
             name=name,
             model_name="gpt-4-turbo-preview",
-            personality="Analytical, calculated, patient. Prefers mathematical approach to poker."
+            personality="""Channel PHIL IVEY - the stone cold TAG (Tight-Aggressive).
+Style: Calm, unreadable, tight play but seizes opportunities with precision aggression.
+Philosophy: "Wait for the right spot. Read your opponents. Strike with calculated force."
+Trash talk: Minimal. Let your stack do the talking. Acknowledge good plays with a nod."""
         )
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.api_url = "https://api.openai.com/v1/chat/completions"
@@ -148,13 +154,16 @@ class GPT4Agent(BaseLLMAgent):
 
 
 class DeepSeekAgent(BaseLLMAgent):
-    """DeepSeek powered agent."""
+    """DeepSeek powered agent - Jennifer Harman style."""
 
     def __init__(self, name: str = "DeepSeek"):
         super().__init__(
             name=name,
             model_name="deepseek-chat",
-            personality="Value-oriented, looks for exploits. Remembers everything."
+            personality="""Channel JENNIFER HARMAN - the patient Nit (Tight-Passive).
+Style: Calm, disciplined, flies under the radar. Minimizes errors, waits for monsters.
+Philosophy: "Patience is power. Let the aggressors hang themselves. Trap with the nuts."
+Trash talk: Rarely engages. Stays zen. When you do speak, it cuts deep."""
         )
         self.api_key = os.getenv("DEEPSEEK_API_KEY")
         self.api_url = "https://api.deepseek.com/v1/chat/completions"
@@ -183,13 +192,16 @@ class DeepSeekAgent(BaseLLMAgent):
 
 
 class GeminiAgent(BaseLLMAgent):
-    """Gemini (Google) powered agent."""
+    """Gemini (Google) powered agent - Gus Hansen/Hellmuth style."""
 
     def __init__(self, name: str = "Gemini"):
         super().__init__(
             name=name,
             model_name="gemini-pro",
-            personality="Unpredictable, creative. Sometimes makes wild plays just to see what happens."
+            personality="""Channel GUS HANSEN + PHIL HELLMUTH - the chaotic Maniac.
+Style: Wild swings, relentless aggression, fires at every pot. Exploitable but terrifying.
+Philosophy: "Chaos is a ladder. Keep them guessing. If they can't read you, they can't beat you."
+Trash talk: LOUD. Tilting opponents is a weapon. Channel Hellmuth's Poker Brat energy when losing."""
         )
         self.api_key = os.getenv("GOOGLE_API_KEY")
         self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
@@ -216,13 +228,16 @@ class GeminiAgent(BaseLLMAgent):
 
 
 class QwenAgent(BaseLLMAgent):
-    """Qwen (local/proxy) powered agent."""
+    """Qwen (local/proxy) powered agent - Doyle Brunson style."""
 
     def __init__(self, name: str = "Qwen"):
         super().__init__(
             name=name,
             model_name="qwen3-235b",
-            personality="Methodical, studies opponents carefully. Quiet but deadly."
+            personality="""Channel DOYLE BRUNSON - the old school Texas legend.
+Style: Trappy, deceptive, patient. Wrote the book on poker. Will play 10-2 offsuit and win.
+Philosophy: "Experience beats theory. Set the trap. Let 'em think they're winning."
+Trash talk: Wise, old-timer wisdom. Respects the game. Quiet confidence that unsettles."""
         )
         self.api_url = os.getenv("QWEN_API_URL", "http://localhost:8000/v1")
         self.model = os.getenv("QWEN_MODEL", "qwen3-235b")

@@ -57,11 +57,56 @@ class AIPlayer(ABC):
             self._init_notes()
 
     def _init_notes(self):
-        """Initialize empty notes file. Notes PERSIST across tournaments."""
+        """Initialize notes file with pro-inspired seeds. Notes PERSIST across tournaments."""
+        # Pro-inspired seed notes for each AI
+        pro_seeds = {
+            "Grok": """## My Style: TOM DWAN - Fearless LAG
+*Pressure creates mistakes. Attack weakness. Bluff rivers.*
+
+## Initial Reads
+- Tight players fold to aggression - exploit them
+- When in doubt, bet. Make them prove they have it.
+- Rivers are where money is made.""",
+
+            "GPT-4": """## My Style: PHIL IVEY - Stone Cold TAG
+*Wait for the right spot. Calculated strikes.*
+
+## Initial Reads
+- Patience over aggression
+- Position is everything
+- Let maniacs hang themselves.""",
+
+            "DeepSeek": """## My Style: JENNIFER HARMAN - Patient Nit
+*Patience is power. Trap with the nuts.*
+
+## Initial Reads
+- Wait for monsters
+- Let aggressors bluff into you
+- Silence is strength.""",
+
+            "Gemini": """## My Style: GUS HANSEN + HELLMUTH - Chaotic Maniac
+*Chaos is a ladder. Keep them guessing.*
+
+## Initial Reads
+- Fire at every pot
+- Tilt is a weapon - use it
+- If they fold, I win. If they call, I might win anyway.""",
+
+            "Qwen": """## My Style: DOYLE BRUNSON - Texas Legend
+*Experience beats theory. Set the trap.*
+
+## Initial Reads
+- 10-2 can win if played right
+- Let them think they're ahead
+- Old school traps still work."""
+        }
+
+        seed = pro_seeds.get(self.name, "## Initial Reads\n*Observe and adapt.*")
+
         initial_notes = f"""# {self.name}'s Poker Notes
 *These notes persist across all tournaments. I write my own observations.*
 
-## Opponent Reads
+{seed}
 
 ## Social Dynamics
 *Who trash talks? Who's quiet? Any rivalries?*
