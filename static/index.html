@@ -147,7 +147,7 @@
         /* Poker table */
         .table-wrapper {
             position: relative;
-            padding: 80px 40px;
+            padding: 120px 180px 220px 180px;
         }
 
         .poker-table {
@@ -340,43 +340,111 @@
             border: 1px solid var(--neon-green);
         }
 
-        /* Seat positions */
+        /* House Dealer at top center */
+        .house-dealer {
+            position: absolute;
+            top: -140px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .dealer-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2d2d3a 0%, #1a1a24 100%);
+            border: 3px solid var(--neon-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(255, 45, 85, 0.4);
+        }
+
+        .dealer-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--neon-red);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        /*
+         * 5 Player seats - at 45-degree corners of the oval + bottom center
+         * Upper players at ~25% from top, lower at ~25% from bottom
+         * Positioned OUTSIDE the table boundary
+         */
+
+        /* Seat 0 - Grok - RIGHT side, upper corner */
         .seat-0 {
             --player-color: var(--grok-color);
-            top: -60px;
+            top: -50px;
+            right: -140px;
+        }
+        .seat-0 .player-bet { left: -40px; top: 50%; transform: translateY(-50%); }
+
+        /* Seat 1 - GPT-4 - RIGHT side, lower corner */
+        .seat-1 {
+            --player-color: var(--gpt4-color);
+            bottom: -80px;
+            right: -140px;
+        }
+        .seat-1 .player-bet { left: -40px; top: 50%; transform: translateY(-50%); }
+
+        /* Seat 2 - DeepSeek - BOTTOM center */
+        .seat-2 {
+            --player-color: var(--deepseek-color);
+            bottom: -205px;
             left: 50%;
             transform: translateX(-50%);
         }
-        .seat-0 .player-bet { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 5px; }
+        .seat-2 .player-bet { top: -25px; left: 50%; transform: translateX(-50%); }
 
-        .seat-1 {
-            --player-color: var(--gpt4-color);
-            top: 15%;
-            right: -80px;
-        }
-        .seat-1 .player-bet { left: -60px; top: 50%; transform: translateY(-50%); }
-
-        .seat-2 {
-            --player-color: var(--deepseek-color);
-            bottom: 15%;
-            right: -80px;
-        }
-        .seat-2 .player-bet { left: -60px; top: 50%; transform: translateY(-50%); }
-
+        /* Seat 3 - Gemini - LEFT side, lower corner */
         .seat-3 {
             --player-color: var(--gemini-color);
-            bottom: -60px;
-            left: 35%;
-            transform: translateX(-50%);
+            bottom: -80px;
+            left: -140px;
         }
-        .seat-3 .player-bet { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 5px; }
+        .seat-3 .player-bet { right: -40px; top: 50%; transform: translateY(-50%); }
 
+        /* Seat 4 - Qwen - LEFT side, upper corner */
         .seat-4 {
             --player-color: var(--qwen-color);
-            bottom: 15%;
-            left: -80px;
+            top: -50px;
+            left: -140px;
         }
-        .seat-4 .player-bet { right: -60px; top: 50%; transform: translateY(-50%); }
+        .seat-4 .player-bet { right: -40px; top: 50%; transform: translateY(-50%); }
+
+        /* Dealer button - positioned ON the table near the button player */
+        .dealer-button-table {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            border: 3px solid #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), inset 0 2px 4px rgba(255,255,255,0.8);
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+
+        /* Button positions ON the table for each player (side layout) */
+        .dealer-button-table.seat-0 { top: 20%; right: 8%; }
+        .dealer-button-table.seat-1 { bottom: 20%; right: 8%; }
+        .dealer-button-table.seat-2 { bottom: 10%; left: 50%; transform: translateX(-50%); }
+        .dealer-button-table.seat-3 { bottom: 20%; left: 8%; }
+        .dealer-button-table.seat-4 { top: 20%; left: 8%; }
 
         /* Side panel */
         .side-panel {
@@ -731,7 +799,16 @@
                             <div class="community-cards" id="communityCards"></div>
                         </div>
 
-                        <!-- Player seats -->
+                        <!-- Dealer Button ON the table (moves to current button player) -->
+                        <div class="dealer-button-table seat-0" id="dealerButton">D</div>
+
+                        <!-- House Dealer (non-player) -->
+                        <div class="house-dealer">
+                            <div class="dealer-avatar">🎰</div>
+                            <div class="dealer-label">Dealer</div>
+                        </div>
+
+                        <!-- Player seats (5 AI players, dealer button rotates among them) -->
                         <div class="player-seat seat-0" id="seat-0">
                             <div class="portrait-frame">
                                 <img src="/assets/portraits/grok_portrait_v1.png" alt="Grok" class="portrait" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%2312121a%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2260%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22%23ff6b35%22>G</text></svg>'">
@@ -1177,6 +1254,20 @@
             setTimeout(() => {
                 document.getElementById('resultOverlay').classList.remove('show');
             }, 3000);
+        }
+
+        function setDealer(player) {
+            // Move the dealer button on the table to the specified player's position
+            const btn = document.getElementById('dealerButton');
+            if (btn) {
+                // Remove all seat classes
+                btn.classList.remove('seat-0', 'seat-1', 'seat-2', 'seat-3', 'seat-4');
+                // Add the correct seat class
+                const idx = PLAYERS.indexOf(player);
+                if (idx !== -1) {
+                    btn.classList.add(`seat-${idx}`);
+                }
+            }
         }
 
         // Initialize
