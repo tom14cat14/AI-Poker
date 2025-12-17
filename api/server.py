@@ -300,6 +300,11 @@ static_path = os.path.join(os.path.dirname(__file__), "..", "static")
 if os.path.exists(static_path):
     app.mount("/static", StaticFiles(directory=static_path), name="static")
 
+# Serve assets (portraits, audio)
+assets_path = os.path.join(os.path.dirname(__file__), "..", "assets")
+if os.path.exists(assets_path):
+    app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
 
 @app.get("/")
 async def serve_viewer():
