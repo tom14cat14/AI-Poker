@@ -27,14 +27,16 @@ from agents import create_all_agents
 # Import broadcast functions for WebSocket updates
 try:
     from api import (
-        broadcast_hand_start, broadcast_action,
+        broadcast_hand_start, broadcast_hole_cards, broadcast_action,
         broadcast_community_cards, broadcast_hand_result,
         broadcast_elimination, broadcast_blinds_up, broadcast_tournament_end,
-        update_player_chips
+        broadcast_tournament_start, update_player_chips
     )
     WEBSOCKET_ENABLED = True
-except ImportError:
+    print("[RUN_TOURNAMENT] WebSocket broadcasts ENABLED")
+except ImportError as e:
     WEBSOCKET_ENABLED = False
+    print(f"[RUN_TOURNAMENT] WebSocket broadcasts DISABLED: {e}")
 
 
 class PokerArena:
@@ -48,6 +50,7 @@ class PokerArena:
         self.current_tournament = None
         self.tournament_history = []
         self.hand_number = 0
+        self.current_game = None  # Reference to current game for pot/chips tracking
 
         # Initialize agents
         self._setup_agents()
@@ -77,15 +80,25 @@ class PokerArena:
         if decision.reasoning:
             print(f"    \"{decision.reasoning}\"")
 
-        # Broadcast to WebSocket
+        # Broadcast to WebSocket with pot and player chips
         if WEBSOCKET_ENABLED:
+            # Get current pot and player chips from game
+            pot = 0
+            player_chips = {}
+            if self.current_game:
+                pot = self.current_game.state.pot if hasattr(self.current_game, 'state') else 0
+                player_chips = {p.name: p.chips for p in self.current_game.players if p.is_active}
+
             asyncio.create_task(broadcast_action(
                 player_name,
                 action_str,
                 decision.amount,
                 decision.reasoning,
                 decision.inner_thoughts,
-                decision.trash_talk
+                decision.trash_talk,
+                None,  # trash_talk_target
+                pot,
+                player_chips
             ))
 
         return (decision.action, decision.amount)
@@ -93,28 +106,63 @@ class PokerArena:
     def on_hand_start(self, hand_number: int, game):
         """Called when a new hand starts."""
         self.hand_number = hand_number
+        self.current_game = game  # Store reference for pot/chips tracking
         print(f"\n{'='*50}")
         print(f"HAND #{hand_number}")
         print(f"Blinds: {game.small_blind}/{game.big_blind}")
         chips = {p.name: p.chips for p in game.players if p.is_active}
         print(f"Chips: {chips}")
 
-        # Get button player name
+        # Get button, SB, BB player names and deal order
         active_players = [p for p in game.players if p.is_active]
         button_player = None
+        sb_player = None
+        bb_player = None
+        deal_order = []
+
         if active_players and hasattr(game, 'button_pos'):
-            button_idx = game.button_pos % len(active_players)
+            num_players = len(active_players)
+            button_idx = game.button_pos % num_players
             button_player = active_players[button_idx].name
-            print(f"Button: {button_player}")
+
+            if num_players == 2:
+                # Heads up: button is SB, other is BB
+                sb_player = button_player
+                bb_player = active_players[(button_idx + 1) % num_players].name
+            else:
+                # 3+ players: SB is left of button, BB is left of SB
+                sb_player = active_players[(button_idx + 1) % num_players].name
+                bb_player = active_players[(button_idx + 2) % num_players].name
+
+            # Deal order starts left of button (SB position)
+            for i in range(num_players):
+                deal_order.append(active_players[(button_idx + 1 + i) % num_players].name)
+
+            print(f"Button: {button_player} | SB: {sb_player} | BB: {bb_player}")
 
         # Broadcast to WebSocket
         if WEBSOCKET_ENABLED:
+            # Broadcast hand start with player chips and positions
             asyncio.create_task(broadcast_hand_start(
                 hand_number,
                 [{"name": p.name, "chips": p.chips} for p in game.players if p.is_active],
-                {"small_blind": game.small_blind, "big_blind": game.big_blind},
-                button_player
+                {
+                    "small_blind": game.small_blind,
+                    "big_blind": game.big_blind,
+                    "sb_player": sb_player,
+                    "bb_player": bb_player
+                },
+                button_player,
+                deal_order
             ))
+
+            # Broadcast all hole cards for spectators (with deal order for animation)
+            player_cards = {}
+            for p in game.players:
+                if p.is_active and p.hole_cards:
+                    player_cards[p.name] = [str(c) for c in p.hole_cards]
+            if player_cards:
+                asyncio.create_task(broadcast_hole_cards(player_cards, deal_order))
 
     def on_hand_complete(self, result):
         """Called when a hand completes."""
@@ -190,6 +238,13 @@ class PokerArena:
         # Get player names from registered agents
         player_names = list(self.manager.players.keys())
         print(f"Players: {', '.join(player_names)}")
+
+        # Broadcast tournament start to WebSocket clients
+        if WEBSOCKET_ENABLED:
+            asyncio.create_task(broadcast_tournament_start(
+                player_names,
+                {"starting_chips": 10000}
+            ))
 
         # Create tournament
         config = TournamentConfig(starting_chips=10000)

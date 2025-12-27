@@ -244,13 +244,15 @@ VALID ACTIONS: {', '.join(actions_str)}
 
 Based on your notes and the current situation, what do you do?
 
+IMPORTANT: Keep ALL text fields to 1-2 SHORT sentences MAX. Be concise like a real poker player.
+
 Respond in this exact JSON format:
 {{
     "action": "fold|check|call|bet|raise|all_in",
     "amount": <number or 0>,
-    "reasoning": "<brief explanation>",
-    "inner_thoughts": "<what you're REALLY thinking - this is for viewers only, other AIs cannot see this. Be honest about your reads, concerns, strategy.>",
-    "trash_talk": "<optional - say something TO THE OTHER PLAYERS if you want. They will hear this and remember it. Or null to stay quiet.>"
+    "reasoning": "<1-2 sentences MAX - brief poker logic>",
+    "inner_thoughts": "<1-2 sentences MAX - your honest read>",
+    "trash_talk": "<short quip or null - keep it punchy>"
 }}
 """
         return prompt
@@ -290,11 +292,51 @@ Just write the note content, no JSON needed:
     def _parse_decision(self, response: str) -> AIDecision:
         """Parse AI response into decision."""
         try:
-            # Try to extract JSON from response
             import re
-            json_match = re.search(r'\{[^}]+\}', response, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group())
+
+            # Clean the response thoroughly
+            response = response.strip()
+            # Remove BOM and zero-width characters
+            response = response.lstrip('\ufeff\u200b\u200c\u200d\u2060\u00a0')
+            # Remove markdown code block markers
+            response = re.sub(r'^```json\s*', '', response, flags=re.IGNORECASE)
+            response = re.sub(r'^```\s*', '', response)
+            response = re.sub(r'\s*```$', '', response)
+            response = response.strip()
+
+            # Find JSON with balanced braces
+            start = response.find('{')
+            if start != -1:
+                depth = 0
+                end = start
+                found_closing = False
+                for i in range(start, len(response)):
+                    if response[i] == '{':
+                        depth += 1
+                    elif response[i] == '}':
+                        depth -= 1
+                        if depth == 0:
+                            end = i + 1
+                            found_closing = True
+                            break
+
+                json_str = response[start:end]
+
+                # If JSON is incomplete (no closing brace found), try to repair it
+                if not found_closing:
+                    # Count how many braces we need to close
+                    json_str += '}'
+                    print(f"[{self.name}] Warning: Truncated JSON, attempting repair")
+
+                # Additional cleanup for JSON string
+                # Remove any trailing commas before closing braces (common LLM error)
+                json_str = re.sub(r',\s*}', '}', json_str)
+                json_str = re.sub(r',\s*]', ']', json_str)
+                # Remove incomplete string values at the end
+                json_str = re.sub(r',\s*"[^"]*$', '}', json_str)
+
+                data = json.loads(json_str)
+
                 action_str = data.get('action', 'fold').lower()
                 action_map = {
                     'fold': Action.FOLD,
@@ -315,6 +357,7 @@ Just write the note content, no JSON needed:
                 return AIDecision(action, amount, reasoning, inner_thoughts, trash_talk)
         except Exception as e:
             print(f"[{self.name}] Failed to parse response: {e}")
+            print(f"[{self.name}] Response was: {response[:300]}...")
 
         # Default to fold if parsing fails
         return AIDecision(Action.FOLD, 0, "Parse error - defaulting to fold")

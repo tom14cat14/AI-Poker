@@ -118,6 +118,39 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
+# Tournament runner (runs in same process for WebSocket integration)
+tournament_task = None
+
+async def run_tournament_in_server():
+    """Run tournament with WebSocket broadcasts."""
+    global tournament_task
+    from run_tournament import PokerArena
+
+    try:
+        arena = PokerArena()
+        results = await arena.run_tournament()
+        return results
+    except Exception as e:
+        print(f"[API] Tournament error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+@app.post("/api/start")
+async def start_tournament():
+    """Start a new tournament."""
+    global tournament_task
+
+    if game_state.is_running:
+        return {"status": "error", "message": "Tournament already running"}
+
+    game_state.is_running = True
+    tournament_task = asyncio.create_task(run_tournament_in_server())
+
+    return {"status": "started", "message": "Tournament starting..."}
+
+
 # REST endpoints
 @app.get("/api/status")
 async def get_status():
@@ -149,7 +182,7 @@ async def get_history(limit: int = 10):
 
 
 # Event broadcasting functions (called by tournament runner)
-async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Dict, button_player: str = None):
+async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Dict, button_player: str = None, deal_order: List[str] = None):
     """Broadcast new hand starting."""
     event = {
         "type": "hand_start",
@@ -158,16 +191,33 @@ async def broadcast_hand_start(hand_number: int, players: List[Dict], blinds: Di
             "hand_number": hand_number,
             "players": players,
             "blinds": blinds,
-            "button_player": button_player
+            "button_player": button_player,
+            "deal_order": deal_order or []
         }
     }
     game_state.current_hand = event["data"]
+    print(f"[WS BROADCAST] hand_start #{hand_number} - players: {[p['name'] for p in players]} - SB: {blinds.get('sb_player')} BB: {blinds.get('bb_player')} - clients: {len(manager.active_connections)}")
+    await manager.broadcast(event)
+
+
+async def broadcast_hole_cards(player_cards: Dict[str, List[str]], deal_order: List[str] = None):
+    """Broadcast all players' hole cards to spectators."""
+    event = {
+        "type": "hole_cards",
+        "timestamp": datetime.now().isoformat(),
+        "data": {
+            "cards": player_cards,  # {player_name: [card1, card2]}
+            "deal_order": deal_order or list(player_cards.keys())
+        }
+    }
+    print(f"[WS BROADCAST] hole_cards - {len(player_cards)} players - deal_order: {deal_order} - clients: {len(manager.active_connections)}")
     await manager.broadcast(event)
 
 
 async def broadcast_action(player: str, action: str, amount: int,
                            reasoning: str, inner_thoughts: str = None,
-                           trash_talk: str = None, trash_talk_target: str = None):
+                           trash_talk: str = None, trash_talk_target: str = None,
+                           pot: int = None, player_chips: Dict[str, int] = None):
     """Broadcast a player action."""
     event = {
         "type": "action",
@@ -179,9 +229,12 @@ async def broadcast_action(player: str, action: str, amount: int,
             "reasoning": reasoning,
             "inner_thoughts": inner_thoughts,  # For viewers only
             "trash_talk": trash_talk,
-            "trash_talk_target": trash_talk_target
+            "trash_talk_target": trash_talk_target,
+            "pot": pot,  # Current pot after action
+            "player_chips": player_chips  # All players' chip counts
         }
     }
+    print(f"[WS BROADCAST] action: {player} {action} - pot: {pot} - clients: {len(manager.active_connections)}")
     await manager.broadcast(event)
 
 
@@ -195,6 +248,7 @@ async def broadcast_community_cards(cards: List[str], stage: str):
             "stage": stage
         }
     }
+    print(f"[WS BROADCAST] community_cards: {stage} - {cards} - clients: {len(manager.active_connections)}")
     await manager.broadcast(event)
 
 
@@ -261,6 +315,7 @@ async def broadcast_tournament_start(players: List[str], config: Dict):
         "timestamp": datetime.now().isoformat(),
         "data": game_state.tournament_info
     }
+    print(f"[WS BROADCAST] tournament_start - players: {players} - clients: {len(manager.active_connections)}")
     await manager.broadcast(event)
 
 

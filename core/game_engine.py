@@ -432,6 +432,28 @@ class PokerGame:
         """
         active = self.active_players()
 
+        # Edge case: everyone folded (shouldn't happen, but handle it)
+        if len(active) == 0:
+            # Find who contributed most to pot - they get it back
+            # (This handles API error edge cases where all fold)
+            max_bet = 0
+            winner = None
+            for p in self.players:
+                if p.is_active and p.current_bet >= max_bet:
+                    max_bet = p.current_bet
+                    winner = p
+            if winner is None:
+                # Ultimate fallback - first active player
+                for p in self.players:
+                    if p.is_active:
+                        winner = p
+                        break
+            if winner:
+                won = self.state.pot
+                winner.chips += won
+                return [(winner, won)]
+            return []
+
         if len(active) == 1:
             # Everyone else folded
             winner = active[0]

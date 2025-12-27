@@ -30,8 +30,8 @@ class BaseLLMAgent(AIPlayer):
         self.timeout = 30.0  # API timeout
 
     # Token limits for different call types
-    DECISION_TOKENS = 200   # Fast, punchy decisions
-    REFLECTION_TOKENS = 400  # Deeper learning/analysis
+    DECISION_TOKENS = 150   # Short JSON response - 1-2 sentences each field
+    REFLECTION_TOKENS = 100  # Brief note update
 
     @abstractmethod
     async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
@@ -88,14 +88,14 @@ class GrokAgent(BaseLLMAgent):
     def __init__(self, name: str = "Grok"):
         super().__init__(
             name=name,
-            model_name="grok-beta",
+            model_name="grok-4-1-fast",
             personality="""Channel TOM DWAN - the fearless LAG (Loose-Aggressive).
 Style: Hyper-aggressive pre and post-flop. Heavy bluffing, wild plays, relentless pressure.
 Philosophy: "Pressure creates mistakes. Attack weakness. Bluff rivers when you sense fear."
 Trash talk: Witty, cocky, but respects great plays. Dark humor."""
         )
         self.api_key = os.getenv("XAI_API_KEY")
-        self.api_url = "https://api.x.ai/v1/chat/completions"
+        self.api_url = os.getenv("XAI_API_URL", "https://api.x.ai/v1/chat/completions")
 
     async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
@@ -109,7 +109,7 @@ Trash talk: Witty, cocky, but respects great plays. Dark humor."""
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "grok-beta",
+                    "model": "grok-4-1-fast",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
                     "max_tokens": max_tokens
@@ -202,18 +202,19 @@ class GeminiAgent(BaseLLMAgent):
     def __init__(self, name: str = "Gemini"):
         super().__init__(
             name=name,
-            model_name="gemini-pro",
+            model_name="gemini-2.5-flash-lite",
             personality="""Channel GUS HANSEN + PHIL HELLMUTH - the chaotic Maniac.
 Style: Wild swings, relentless aggression, fires at every pot. Exploitable but terrifying.
 Philosophy: "Chaos is a ladder. Keep them guessing. If they can't read you, they can't beat you."
 Trash talk: LOUD. Tilting opponents is a weapon. Channel Hellmuth's Poker Brat energy when losing."""
         )
-        self.api_key = os.getenv("GOOGLE_API_KEY")
-        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.model = "models/gemini-2.5-flash-lite"
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:generateContent"
 
     async def _call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY not set")
+            raise ValueError("GEMINI_API_KEY not set")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
